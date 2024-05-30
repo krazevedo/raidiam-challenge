@@ -1,0 +1,20 @@
+{
+  "name": "raidiam-challenge",
+  "version": "1.0.0",
+  "description": "Raidiam Test Challange",
+  "scripts": {
+    "cy:open": "cypress open",
+    "test": "cypress run"
+  },
+  "keywords": [
+    "Raidiam",
+    "Cypress",
+    "API-Testing"
+  ],
+  "author": "Kaio Azevedo",
+  "license": "MIT",
+  "devDependencies": {
+    "@faker-js/faker": "^8.4.1",
+    "cypress": "^13.10.0"
+  }
+}
