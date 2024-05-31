@@ -2,9 +2,8 @@ import { faker } from '@faker-js/faker';
 const accounts = require('../../fixtures/accounts.json');
 
 describe('Accounts API tests', () => {
-  it('get accounts successfully retrieves accounts information', () => {
+  it('[BUG] get accounts successfully retrieves accounts information', () => {
     cy.getAccounts().should(({ status, body }) => {
-      console.log(body);
       expect(status).to.eq(200);
       expect(body.data.length).to.be.above(0);
       body.data.forEach(checkAccounts);
@@ -12,8 +11,7 @@ describe('Accounts API tests', () => {
   });
 
   it('get accounts returns a 403 for a non-present consent ID', () => {
-    cy.getAccountsWithNoPermission().should(({ status, body }) => {
-      console.log(body);
+    cy.getAccountsWithNoAccountScope().should(({ status, body }) => {
       expect(status).to.eq(403);
       expect(body._embedded.errors[0].message).to.eq(
         `Consent Id not present on the request`
@@ -21,9 +19,17 @@ describe('Accounts API tests', () => {
     });
   });
 
+  it('get accounts returns a 403 for a non-account permission', () => {
+    cy.getAccountsWithNoAccountPermission().should(({ status, body }) => {
+      expect(status).to.eq(403);
+      expect(body._embedded.errors[0].message).to.include(
+        "doesn't have right permissions"
+      );
+    });
+  });
+
   it('get accounts returns a 403 for a rejected consent ID', () => {
     cy.getAccountsWithRejectedConsent().should(({ status, body }) => {
-      console.log(body);
       expect(status).to.eq(403);
       expect(body._embedded.errors[0].message).to.eq(
         `Consent Id not present on the request`
@@ -33,13 +39,12 @@ describe('Accounts API tests', () => {
 
   it('get accounts returns a 401 for a non-auth user', () => {
     cy.getAccountsWithNoAuth().should(({ status, body }) => {
-      console.log(body);
       expect(status).to.eq(401);
       expect(body._embedded.errors[0].message).to.eq(`Unauthorized`);
     });
   });
 
-  it('get account fetches account details for a valid account ID', () => {
+  it('[BUG] get account fetches account details for a valid account ID', () => {
     cy.getAccount().then(({ status, body }) => {
       expect(status).to.eq(200);
       checkAccounts(body.data, 0);
@@ -74,7 +79,6 @@ describe('Accounts API tests', () => {
     const accountId = faker.string.uuid();
     cy.getAccount(accountId).should(({ status, body }) => {
       expect(status).to.eq(404);
-      console.log(body);
       expect(body._embedded.errors[0].message).to.eq(
         `Account Id ${accountId} not found`
       );
@@ -82,7 +86,7 @@ describe('Accounts API tests', () => {
   });
 
   it('[BUG] get account returns a 403 for a non-present consent ID', () => {
-    cy.getAccountsWithNoPermission().then((res) => {
+    cy.getAccountsWithNoAccountScope().then((res) => {
       const auth = res.requestHeaders['Authorization'];
       const accountId = accounts.data[0].id;
       cy.getAccount(accountId, auth).then(({ status, body }) => {

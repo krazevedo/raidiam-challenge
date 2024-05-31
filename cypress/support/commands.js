@@ -1,5 +1,6 @@
 // Import necessary modules and data at the top
 const accountsPermission = require('../fixtures/scope_accounts_read.json');
+const cardPermission = require('../fixtures/scope_credit_card_read.json');
 const authorized = require('../fixtures/authorized.json');
 const rejected = require('../fixtures/rejected.json');
 const jwtToken = Cypress.env('JWT_ACCESS_TOKEN');
@@ -11,7 +12,7 @@ const BASE_API_URL = '/test-api';
 
 Cypress.Commands.add('getAccounts', () => {
   cy.generateToken('consents accounts').then((authorization) => {
-    cy.createConsent(authorization).then(({ status, body }) => {
+    cy.createConsent(authorization, 'Accounts').then(({ status, body }) => {
       expect(status).to.eq(201);
       const consentId = body.data.consentId;
       cy.updateConsent(authorization, consentId, 'Authorized');
@@ -44,6 +45,24 @@ Cypress.Commands.add('getAccount', (id) => {
   });
 });
 
+Cypress.Commands.add('getAccountsWithNoAccountPermission', () => {
+  cy.generateToken('consents accounts').then((authorization) => {
+    cy.createConsent(authorization, 'Card').then(({ status, body }) => {
+      expect(status).to.eq(201);
+      const consentId = body.data.consentId;
+      cy.updateConsent(authorization, consentId, 'Authorized');
+      cy.generateToken('account', consentId).then((authorization) => {
+        cy.request({
+          method: 'GET',
+          url: `${BASE_API_URL}/accounts/v1/accounts/`,
+          failOnStatusCode: false,
+          headers: { Authorization: `Bearer ${authorization}` },
+        });
+      });
+    });
+  });
+});
+
 Cypress.Commands.add('getAccountNoAuth', (id) => {
   cy.getAccounts().then((res) => {
     const authorization = res.requestHeaders['Authorization'];
@@ -60,7 +79,7 @@ Cypress.Commands.add('getAccountNoAuth', (id) => {
   });
 });
 
-Cypress.Commands.add('getAccountsWithNoPermission', () => {
+Cypress.Commands.add('getAccountsWithNoAccountScope', () => {
   cy.consentFlow('Authorized');
   cy.generateToken('accounts').then((authorization) => {
     cy.request({
@@ -86,7 +105,7 @@ Cypress.Commands.add('getAccountsWithNoAuth', () => {
 
 Cypress.Commands.add('getAccountsWithRejectedConsent', () => {
   cy.generateToken('consents accounts').then((authorization) => {
-    cy.createConsent(authorization).then(({ status, body }) => {
+    cy.createConsent(authorization, 'Accounts').then(({ status, body }) => {
       expect(status).to.eq(201);
       const consentId = body.data.consentId;
       cy.updateConsent(authorization, consentId, 'Rejected');
@@ -104,7 +123,7 @@ Cypress.Commands.add('getAccountsWithRejectedConsent', () => {
 
 Cypress.Commands.add('consentFlow', (type) => {
   cy.generateToken('consent').then((authorization) => {
-    cy.createConsent(authorization).then(({ status, body }) => {
+    cy.createConsent(authorization, 'Accounts').then(({ status, body }) => {
       expect(status).to.eq(201);
       const consentId = body.data.consentId;
       cy.updateConsent(authorization, consentId, type);
@@ -143,13 +162,22 @@ function getAuthTokenObject(type, consent) {
   return { scope, client_id: 'client1' };
 }
 
-Cypress.Commands.add('createConsent', (authorization) => {
-  cy.request({
-    method: 'POST',
-    url: `${BASE_API_URL}/consents/v1/consents`,
-    headers: { Authorization: `Bearer ${authorization}` },
-    body: accountsPermission,
-  });
+Cypress.Commands.add('createConsent', (authorization, type) => {
+  if (type === 'Accounts') {
+    cy.request({
+      method: 'POST',
+      url: `${BASE_API_URL}/consents/v1/consents`,
+      headers: { Authorization: `Bearer ${authorization}` },
+      body: accountsPermission,
+    });
+  } else {
+    cy.request({
+      method: 'POST',
+      url: `${BASE_API_URL}/consents/v1/consents`,
+      headers: { Authorization: `Bearer ${authorization}` },
+      body: cardPermission,
+    });
+  }
 });
 
 Cypress.Commands.add('updateConsent', (authorization, id, status) => {
